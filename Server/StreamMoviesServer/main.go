@@ -19,8 +19,8 @@ import (
 func main() {
 	router := gin.Default()
 
-	router.GET("/hello", func(c *gin.Context) {
-		c.String(200, "Hello, MagicStreamMovies!")
+	router.GET("/healthcheck", func(c *gin.Context) {
+		c.String(200, "ok")
 	})
 
 	err := godotenv.Load(".env")
