@@ -5,8 +5,8 @@ node_modules/
 dist/
 
 # Go build artifacts
-Server/StreamMoviesServerapp
-Server/StreamMoviesServerbin/
+Server/StreamMoviesServer/app
+Server/StreamMoviesServer/bin/
 *.exe
 *.dll
 *.out
