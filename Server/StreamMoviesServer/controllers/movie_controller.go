@@ -14,6 +14,29 @@ import (
 
 var movieCollection *mongo.Collection = database.OpenCollection("movies")
 
+func GetGenres(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		var genresCollection *mongo.Collection = database.OpenCollection("genres")
+
+		cursor, err := genresCollection.Find(ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch genres"})
+			return
+		}
+		defer cursor.Close(ctx)
+
+		var results []models.Genre
+		if err = cursor.All(ctx, &results); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode genres"})
+			return
+		}
+
+		c.JSON(http.StatusOK, results)
+	}
+}
+
 func GetMovies(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)

@@ -12,6 +12,6 @@ func SetupUnProtectedRoutes(router *gin.Engine, client *mongo.Client) {
 	v1.POST("/register", controllers.RegisterUser(client))
 	v1.POST("/login", controllers.LoginUser(client))
 	v1.POST("/logout", controllers.LogoutHandler(client))
-	// router.GET("/genres", controllers.GetGenres(client))
+	v1.GET("/genres", controllers.GetGenres(client))
 	v1.POST("/refresh", controllers.RefreshTokenHandler(client))
 }
