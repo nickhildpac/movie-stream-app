@@ -136,7 +136,7 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			LastName:  foundUser.LastName,
 			Email:     foundUser.Email,
 			Role:      foundUser.Role,
-			//Token:           token,
+			Token:     token,
 			//RefreshToken:    refreshToken,
 			FavouriteGenres: foundUser.FavouriteGenres,
 		})
@@ -251,6 +251,6 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 		c.SetCookie("access_token", newToken, 86400, "/", "localhost", true, true)          // expires in 24 hours
 		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) //expires in 1 week
 
-		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed"})
+		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed", "access_token": newToken})
 	}
 }
