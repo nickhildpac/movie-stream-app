@@ -4,6 +4,8 @@ import type { Movie, CreateMovieInput } from '../types';
 
 interface MovieContextType {
   movies: Movie[];
+  recommendedMovies: Movie[];
+  fetchRecommendedMovies: () => Promise<void>;
   addMovie: (movie: CreateMovieInput) => void;
   updateMovie: (id: string, movie: Partial<Movie>) => void;
   deleteMovie: (id: string) => void;
@@ -26,11 +28,14 @@ interface MovieProviderProps {
 
 export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await fetch('http://localhost:8080/v1/movies');
+        const response = await fetch('http://localhost:8080/v1/movies',{
+          credentials: 'include',
+        });
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -45,6 +50,21 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
     fetchMovies();
   }, []);
 
+  const fetchRecommendedMovies = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/v1/recommendedmovies',{
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      setRecommendedMovies(data);
+    } catch (error) {
+      console.error("Failed to fetch recommended movies:", error);
+    }
+  };
+
   const addMovie = (movieInput: CreateMovieInput) => {
     // This will be replaced with an API call
     const newMovie: Movie = {
@@ -55,10 +75,24 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
   };
 
   const updateMovie = (id: string, updates: Partial<Movie>) => {
-    const newMovies = movies.map(movie =>
-      movie._id === id ? { ...movie, ...updates } : movie
-    );
-    setMovies(newMovies);
+    const reqBody = {
+      admin_review: updates.admin_review
+    }
+    fetch(`http://localhost:8080/v1/movie/${id}/updatereview`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reqBody),
+      credentials: 'include',
+    }).then(response => {
+      if (response.ok) {
+        const newMovies = movies.map(movie =>
+          movie.imdb_id === id ? { ...movie, ...updates } : movie
+        );
+        setMovies(newMovies);
+      }
+    });
   };
 
   const deleteMovie = (id: string) => {
@@ -71,7 +105,7 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
   };
 
   return (
-    <MovieContext.Provider value={{ movies, addMovie, updateMovie, deleteMovie, getMovie }}>
+    <MovieContext.Provider value={{ movies, addMovie, updateMovie, deleteMovie, getMovie, recommendedMovies, fetchRecommendedMovies }}>
       {children}
     </MovieContext.Provider>
   );
