@@ -10,7 +10,7 @@ const Homepage = () => {
   const averageRating = movies.length > 0
     ? (movies.reduce((sum, movie) => sum + movie.ranking.ranking_value, 0) / movies.length).toFixed(1)
     : 'N/A';
-  
+
   const uniqueGenres = new Set(movies.flatMap(movie => movie.genre.map(g => g.genre_name))).size;
 
   return (
@@ -51,7 +51,7 @@ const Homepage = () => {
       </section>
 
       <section>
-        <h2 className="text-2xl font-semibold mb-4">Featured Movies</h2>
+        <h2 className="text-2xl font-semibold mb-4">Recommended Movies</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {movies.slice(0, 9).map(movie => (
             <Card key={movie._id} className="overflow-hidden">

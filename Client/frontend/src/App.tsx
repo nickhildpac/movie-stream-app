@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { MovieProvider } from './contexts/MovieContext';
+import { Toaster } from './components/ui/toaster';
 import Navbar from './components/Navbar';
 import Homepage from './pages/Homepage';
 import Login from './pages/Login';
@@ -25,6 +26,7 @@ function App() {
               <Route path="/movies/:id" element={<MovieDetails />} />
             </Routes>
           </main>
+          <Toaster />
         </Router>
       </MovieProvider>
     </AuthProvider>
