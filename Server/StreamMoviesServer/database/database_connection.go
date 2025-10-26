@@ -1,3 +1,4 @@
+// Package database contains database domain connectors
 package database
 
 import (
@@ -24,16 +25,13 @@ func Connect() *mongo.Client {
 
 	clientOptions := options.Client().ApplyURI(MongoDB)
 	client, err := mongo.Connect(clientOptions)
-
 	if err != nil {
 		return nil
 	}
 	return client
 }
 
-var Client *mongo.Client = Connect()
-
-func OpenCollection(collectionName string) *mongo.Collection {
+func OpenCollection(collectionName string, client *mongo.Client) *mongo.Collection {
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("Warning : unable to find .env file")
@@ -41,7 +39,7 @@ func OpenCollection(collectionName string) *mongo.Collection {
 	databaseName := os.Getenv("DATABASE_NAME")
 	fmt.Println("DATABASE_NAME: ", databaseName)
 
-	collection := Client.Database(databaseName).Collection(collectionName)
+	collection := client.Database(databaseName).Collection(collectionName)
 	if collection == nil {
 		return nil
 	}

@@ -16,8 +16,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var usersCollection *mongo.Collection = database.OpenCollection("users")
-
 func HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -29,6 +27,7 @@ func HashPassword(password string) (string, error) {
 func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user models.User
+		usersCollection := database.OpenCollection("users", client)
 
 		if err := c.ShouldBindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input data"})
@@ -44,7 +43,7 @@ func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 			return
 
 		}
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 		count, err := usersCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 		if err != nil {
@@ -78,10 +77,10 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
-		var ctx, cancel = context.WithTimeout(c, 100*time.Second)
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 
-		var userCollection *mongo.Collection = database.OpenCollection("users")
+		userCollection := database.OpenCollection("users", client)
 
 		var foundUser models.User
 		err := userCollection.FindOne(ctx, bson.D{{Key: "email", Value: userLogin.Email}}).Decode(&foundUser)
@@ -97,14 +96,12 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 		}
 
 		token, refreshToken, err := utils.GenerateAllTokens(foundUser.Email, foundUser.FirstName, foundUser.LastName, foundUser.Role, foundUser.UserID)
-
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
 			return
 		}
 
 		err = utils.UpdateAllTokens(foundUser.UserID, token, refreshToken, client)
-
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
 			return
@@ -137,10 +134,9 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			Email:     foundUser.Email,
 			Role:      foundUser.Role,
 			Token:     token,
-			//RefreshToken:    refreshToken,
+			// RefreshToken:    refreshToken,
 			FavouriteGenres: foundUser.FavouriteGenres,
 		})
-
 	}
 }
 
@@ -149,7 +145,7 @@ func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 		// Clear the access_token cookie
 
 		var UserLogout struct {
-			UserId string `json:"user_id"`
+			UserID string `json:"user_id"`
 		}
 
 		err := c.ShouldBindJSON(&UserLogout)
@@ -158,11 +154,10 @@ func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
-		fmt.Println("User ID from Logout request:", UserLogout.UserId)
+		fmt.Println("User ID from Logout request:", UserLogout.UserID)
 
-		err = utils.UpdateAllTokens(UserLogout.UserId, "", "", client) // Clear tokens in the database
+		err = utils.UpdateAllTokens(UserLogout.UserID, "", "", client) // Clear tokens in the database
 		// Optionally, you can also remove the user session from the database if needed
-
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error logging out"})
 			return
@@ -213,11 +208,10 @@ func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 
 func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(c, 100*time.Second)
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 
 		refreshToken, err := c.Cookie("refresh_token")
-
 		if err != nil {
 			fmt.Println("error", err.Error())
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unable to retrieve refresh token from cookie"})
@@ -231,11 +225,10 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
-		var userCollection *mongo.Collection = database.OpenCollection("users")
+		userCollection := database.OpenCollection("users", client)
 
 		var user models.User
-		err = userCollection.FindOne(ctx, bson.D{{Key: "user_id", Value: claim.UserId}}).Decode(&user)
-
+		err = userCollection.FindOne(ctx, bson.D{{Key: "user_id", Value: claim.UserID}}).Decode(&user)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			return
@@ -249,7 +242,7 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 		}
 
 		c.SetCookie("access_token", newToken, 86400, "/", "localhost", true, true)          // expires in 24 hours
-		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) //expires in 1 week
+		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) // expires in 1 week
 
 		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed", "access_token": newToken})
 	}

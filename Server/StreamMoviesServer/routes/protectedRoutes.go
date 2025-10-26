@@ -1,3 +1,4 @@
+// Package routes contain url paths mapping to controllers
 package routes
 
 import (
@@ -13,6 +14,6 @@ func SetupProtectedRoutes(router *gin.Engine, client *mongo.Client) {
 
 	v1.GET("/movie/:imdb_id", controllers.GetMovie(client))
 	v1.POST("/addmovie", controllers.AddMovie(client))
-	// router.GET("/recommendedmovies", controllers.GetRecommendedMovies(client))
-	// router.PATCH("/updatereview/:imdb_id", controllers.AdminReviewUpdate(client))
+	v1.GET("/recommendedmovies", controllers.GetRecommendedMovies(client))
+	v1.PATCH("/updatereview/:imdb_id", controllers.AdminReviewUpdate(client))
 }

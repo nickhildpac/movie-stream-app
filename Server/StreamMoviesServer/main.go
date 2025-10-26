@@ -13,7 +13,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/database"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/routes"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func main() {
@@ -45,7 +44,7 @@ func main() {
 	config := cors.Config{}
 	config.AllowOrigins = origins
 	config.AllowMethods = []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"}
-	//config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	// config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	config.ExposeHeaders = []string{"Content-Length"}
 	config.AllowCredentials = true
@@ -54,7 +53,7 @@ func main() {
 	router.Use(cors.New(config))
 	router.Use(gin.Logger())
 
-	var client *mongo.Client = database.Connect()
+	client := database.Connect()
 
 	if err := client.Ping(context.Background(), nil); err != nil {
 		log.Fatalf("Failed to reach server: %v", err)
@@ -64,7 +63,6 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
-
 	}()
 
 	routes.SetupUnProtectedRoutes(router, client)
@@ -73,5 +71,4 @@ func main() {
 	if err := router.Run(":8080"); err != nil {
 		fmt.Println("Failed to start server", err)
 	}
-
 }

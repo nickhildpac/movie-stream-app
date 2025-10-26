@@ -1,3 +1,4 @@
+// Package utils consists function used for tokens and auth
 package utils
 
 import (
@@ -18,20 +19,22 @@ type SignedDetails struct {
 	FirstName string
 	LastName  string
 	Role      string
-	UserId    string
+	UserID    string
 	jwt.RegisteredClaims
 }
 
-var SECRET_KEY string = os.Getenv("SECRET_KEY")
-var SECRET_REFRESH_KEY string = os.Getenv("SECRET_REFRESH_KEY")
+var (
+	SecretKey        string = os.Getenv("SECRET_KEY")
+	SecretRefreshKey string = os.Getenv("SECRET_REFRESH_KEY")
+)
 
-func GenerateAllTokens(email, firstName, lastName, role, userId string) (string, string, error) {
+func GenerateAllTokens(email, firstName, lastName, role, userID string) (string, string, error) {
 	claims := &SignedDetails{
 		Email:     email,
 		FirstName: firstName,
 		LastName:  lastName,
 		Role:      role,
-		UserId:    userId,
+		UserID:    userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "MovieStreamApp",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -39,8 +42,7 @@ func GenerateAllTokens(email, firstName, lastName, role, userId string) (string,
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString([]byte(SECRET_KEY))
-
+	signedToken, err := token.SignedString([]byte(SecretKey))
 	if err != nil {
 		return "", "", err
 	}
@@ -50,7 +52,7 @@ func GenerateAllTokens(email, firstName, lastName, role, userId string) (string,
 		FirstName: firstName,
 		LastName:  lastName,
 		Role:      role,
-		UserId:    userId,
+		UserID:    userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "MagicStream",
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -58,16 +60,15 @@ func GenerateAllTokens(email, firstName, lastName, role, userId string) (string,
 		},
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	signedRefreshToken, err := refreshToken.SignedString([]byte(SECRET_REFRESH_KEY))
-
+	signedRefreshToken, err := refreshToken.SignedString([]byte(SecretRefreshKey))
 	if err != nil {
 		return "", "", err
 	}
 	return signedToken, signedRefreshToken, nil
 }
 
-func UpdateAllTokens(userId, token, refreshToken string, client *mongo.Client) (err error) {
-	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+func UpdateAllTokens(userID, token, refreshToken string, client *mongo.Client) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	updateAt, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
@@ -80,10 +81,9 @@ func UpdateAllTokens(userId, token, refreshToken string, client *mongo.Client) (
 		},
 	}
 
-	var userCollection *mongo.Collection = database.OpenCollection("users")
+	userCollection := database.OpenCollection("users", client)
 
-	_, err = userCollection.UpdateOne(ctx, bson.M{"user_id": userId}, updateData)
-
+	_, err = userCollection.UpdateOne(ctx, bson.M{"user_id": userID}, updateData)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func ValidateToken(tokenString string) (*SignedDetails, error) {
 	claims := &SignedDetails{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
-		return []byte(SECRET_KEY), nil
+		return []byte(SecretKey), nil
 	})
 	if err != nil {
 		return nil, err
@@ -121,21 +121,21 @@ func ValidateToken(tokenString string) (*SignedDetails, error) {
 		return nil, err
 	}
 
-	if claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt.Before(time.Now()) {
 		return nil, errors.New("token has expired")
 	}
 
 	return claims, nil
 }
 
-func GetUserIdFromContext(c *gin.Context) (string, error) {
-	userId, exists := c.Get("userId")
+func GetUserIDFromContext(c *gin.Context) (string, error) {
+	userID, exists := c.Get("userID")
 
 	if !exists {
 		return "", errors.New("userId does not exists in this context")
 	}
 
-	id, ok := userId.(string)
+	id, ok := userID.(string)
 
 	if !ok {
 		return "", errors.New("unable to retrieve userId")
@@ -146,7 +146,6 @@ func GetUserIdFromContext(c *gin.Context) (string, error) {
 
 func GetRoleFromContext(c *gin.Context) (string, error) {
 	role, exists := c.Get("role")
-
 	if !exists {
 		return "", errors.New("role does not exists in this context")
 	}
@@ -161,10 +160,8 @@ func GetRoleFromContext(c *gin.Context) (string, error) {
 func ValidateRefreshToken(tokenString string) (*SignedDetails, error) {
 	claims := &SignedDetails{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-
-		return []byte(SECRET_REFRESH_KEY), nil
+		return []byte(SecretRefreshKey), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +170,7 @@ func ValidateRefreshToken(tokenString string) (*SignedDetails, error) {
 		return nil, err
 	}
 
-	if claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt.Before(time.Now()) {
 		return nil, errors.New("refresh token has expired")
 	}
 
