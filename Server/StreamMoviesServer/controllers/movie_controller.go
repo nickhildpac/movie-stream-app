@@ -48,15 +48,12 @@ func GetGenres(client *mongo.Client) gin.HandlerFunc {
 
 func GetMovies(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		log.Println("line 51 error")
 		ctx, cancel := context.WithTimeout(c, 100*time.Second)
 		defer cancel()
-		log.Println("line 54 error")
 		movieCollection := database.OpenCollection("movies", client)
 		var movies []models.Movie
 		cursor, err := movieCollection.Find(ctx, bson.M{})
 		if err != nil {
-			log.Println("line 57 error")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -216,7 +213,7 @@ func GetReviewRanking(adminReview string, client *mongo.Client) (string, int, er
 
 func GetRankings(client *mongo.Client) ([]models.Ranking, error) {
 	var rankings []models.Ranking
-	ctx, cancel := context.WithTimeout(context.Background(), 00*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	rankingCollection := database.OpenCollection("rankings", client)
 	cursor, err := rankingCollection.Find(ctx, bson.M{})
@@ -255,7 +252,7 @@ func GetRecommendedMovies(client *mongo.Client) gin.HandlerFunc {
 		findOptions.SetSort(bson.D{{Key: "ranking.ranking_value", Value: 1}})
 		findOptions.SetLimit(recommendedMoviesLimitVal)
 		filter := bson.M{"genre.genre_name": bson.M{"$in": favouriteGenres}}
-		ctx, cancel := context.WithTimeout(c, 00*time.Second)
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 		movieCollection := database.OpenCollection("movies", client)
 		cursor, err := movieCollection.Find(ctx, filter, findOptions)
@@ -269,12 +266,13 @@ func GetRecommendedMovies(client *mongo.Client) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		log.Println(`Recommended Movies:`, recommendedMovies)
 		c.JSON(http.StatusOK, recommendedMovies)
 	}
 }
 
 func GetUsersFavouriteGenres(userID string, client *mongo.Client) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 00*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	filter := bson.M{"user_id": userID}
 	projection := bson.M{
