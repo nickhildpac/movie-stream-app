@@ -39,10 +39,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshToken = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:8080/v1/refresh", {
-        method: "POST",
-        credentials: "include",
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/refresh`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -77,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [refreshToken]);
 
   const login = async (input: LoginInput) => {
-    const response = await fetch("http://localhost:8080/v1/login", {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -117,20 +120,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw new Error("Passwords do not match");
     }
 
-    const response = await fetch("http://localhost:8080/v1/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/register`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          first_name: input.first_name,
+          last_name: input.last_name,
+          email: input.email,
+          password: input.password,
+          favourite_genres: input.favourite_genres,
+          role: "USER",
+        }),
       },
-      body: JSON.stringify({
-        first_name: input.first_name,
-        last_name: input.last_name,
-        email: input.email,
-        password: input.password,
-        favourite_genres: input.favourite_genres,
-        role: "USER",
-      }),
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -145,14 +151,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
-    const response = await fetch("http://localhost:8080/v1/logout", {
-      method: "POST",
-      body: JSON.stringify({ user_id: user?.id }),
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/logout`,
+      {
+        method: "POST",
+        body: JSON.stringify({ user_id: user?.id }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
       },
-      credentials: "include",
-    });
+    );
     if (response.ok)
       toast({
         title: "Logout successful!",

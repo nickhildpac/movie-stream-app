@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { ReactNode } from 'react';
-import type { Movie, CreateMovieInput } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import type { ReactNode } from "react";
+import type { Movie, CreateMovieInput } from "../types";
 
 interface MovieContextType {
   movies: Movie[];
@@ -17,7 +23,7 @@ const MovieContext = createContext<MovieContextType | undefined>(undefined);
 export const useMovies = () => {
   const context = useContext(MovieContext);
   if (!context) {
-    throw new Error('useMovies must be used within a MovieProvider');
+    throw new Error("useMovies must be used within a MovieProvider");
   }
   return context;
 };
@@ -33,16 +39,19 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await fetch('http://localhost:8080/v1/movies',{
-          credentials: 'include',
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/movies`,
+          {
+            credentials: "include",
+          },
+        );
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         const data = await response.json();
         setMovies(data);
       } catch (error) {
-        console.error("Failed to fetch movies:", error);
+        console.error("", error);
         // Optionally, set some error state here
       }
     };
@@ -50,20 +59,23 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
     fetchMovies();
   }, []);
 
-  const fetchRecommendedMovies = async () => {
+  const fetchRecommendedMovies = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8080/v1/recommendedmovies',{
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/recommendedmovies`,
+        {
+          credentials: "include",
+        },
+      );
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
       const data = await response.json();
       setRecommendedMovies(data);
     } catch (error) {
-      console.error("Failed to fetch recommended movies:", error);
+      console.error("", error);
     }
-  };
+  }, []);
 
   const addMovie = (movieInput: CreateMovieInput) => {
     // This will be replaced with an API call
@@ -76,19 +88,19 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
 
   const updateMovie = (id: string, updates: Partial<Movie>) => {
     const reqBody = {
-      admin_review: updates.admin_review
-    }
-    fetch(`http://localhost:8080/v1/movie/${id}/updatereview`, {
-      method: 'PATCH',
+      admin_review: updates.admin_review,
+    };
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/movie/${id}/updatereview`, {
+      method: "PATCH",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(reqBody),
-      credentials: 'include',
-    }).then(response => {
+      credentials: "include",
+    }).then((response) => {
       if (response.ok) {
-        const newMovies = movies.map(movie =>
-          movie.imdb_id === id ? { ...movie, ...updates } : movie
+        const newMovies = movies.map((movie) =>
+          movie.imdb_id === id ? { ...movie, ...updates } : movie,
         );
         setMovies(newMovies);
       }
@@ -96,16 +108,26 @@ export const MovieProvider: React.FC<MovieProviderProps> = ({ children }) => {
   };
 
   const deleteMovie = (id: string) => {
-    const newMovies = movies.filter(movie => movie._id !== id);
+    const newMovies = movies.filter((movie) => movie._id !== id);
     setMovies(newMovies);
   };
 
   const getMovie = (id: string) => {
-    return movies.find(movie => movie.imdb_id === id);
+    return movies.find((movie) => movie.imdb_id === id);
   };
 
   return (
-    <MovieContext.Provider value={{ movies, addMovie, updateMovie, deleteMovie, getMovie, recommendedMovies, fetchRecommendedMovies }}>
+    <MovieContext.Provider
+      value={{
+        movies,
+        addMovie,
+        updateMovie,
+        deleteMovie,
+        getMovie,
+        recommendedMovies,
+        fetchRecommendedMovies,
+      }}
+    >
       {children}
     </MovieContext.Provider>
   );

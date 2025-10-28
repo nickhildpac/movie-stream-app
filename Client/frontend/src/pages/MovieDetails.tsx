@@ -35,7 +35,7 @@ const MovieDetails = () => {
 
   const handleEdit = (updatedMovie: Partial<Movie>) => {
     if (movie) {
-      updateMovie(movie._id, updatedMovie);
+      updateMovie(movie.imdb_id, updatedMovie);
       setIsEditOpen(false);
     }
   };
@@ -107,16 +107,16 @@ const MovieDetails = () => {
 
 const EditMovieForm = ({ movie, onSave }: { movie: Movie; onSave: (movie: Partial<Movie>) => void }) => {
   const [title, setTitle] = useState(movie.title);
-  const [description, setDescription] = useState(movie.admin_review);
+  const [review, setReview] = useState(movie.admin_review);
   const [posterUrl, setPosterUrl] = useState(movie.poster_path);
-  const [genres, setGenres] = useState(movie.genre.map((genre: { genre_name: string,genre_id: number}) => genre.genre_name).join(', '));
+  const [genres, setGenres] = useState(movie.genre.map((genre: { genre_name: string, genre_id: number }) => genre.genre_name).join(', '));
   const [rating, setRating] = useState(movie.ranking.ranking_value.toString());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       ...movie,
-      title,
+      admin_review: review
     });
   };
 
@@ -128,7 +128,7 @@ const EditMovieForm = ({ movie, onSave }: { movie: Movie; onSave: (movie: Partia
       </div>
       <div>
         <Label htmlFor="edit-description">Review</Label>
-        <Textarea id="edit-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Textarea id="edit-description" value={review} onChange={(e) => setReview(e.target.value)} />
       </div>
       <div>
         <Label htmlFor="edit-posterUrl">Poster URL</Label>
