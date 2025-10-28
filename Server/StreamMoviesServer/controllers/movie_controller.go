@@ -118,8 +118,8 @@ func AdminReviewUpdate(client *mongo.Client) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Role not found in context"})
 			return
 		}
-		if role != "ADMIN" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "User must be admin"})
+		if role != "ADMIN" && role != "USER" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User must be admin or user"})
 			return
 		}
 		movieID := c.Param("imdb_id")
@@ -138,7 +138,7 @@ func AdminReviewUpdate(client *mongo.Client) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 			return
 		}
-		sentiment, rankVal, err := GetReviewRanking(req.AdminReview, client)
+		sentiment, rankVal, err := GetReviewRanking(req.AdminReview, client, c)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting review ranking"})
 			return
@@ -171,8 +171,8 @@ func AdminReviewUpdate(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
-func GetReviewRanking(adminReview string, client *mongo.Client) (string, int, error) {
-	rankings, err := GetRankings(client)
+func GetReviewRanking(adminReview string, client *mongo.Client, c *gin.Context) (string, int, error) {
+	rankings, err := GetRankings(client, c)
 	if err != nil {
 		return "", 0, err
 	}
@@ -197,7 +197,7 @@ func GetReviewRanking(adminReview string, client *mongo.Client) (string, int, er
 	}
 	basePromptTemplate := os.Getenv("BASE_PROMPT_TEMPLATE")
 	basePrompt := strings.Replace(basePromptTemplate, "{rankings}", sentimentDelimited, 1)
-	response, err := llm.Call(context.Background(), basePrompt+adminReview)
+	response, err := llm.Call(c, basePrompt+adminReview)
 	if err != nil {
 		return "", 0, nil
 	}
@@ -211,9 +211,9 @@ func GetReviewRanking(adminReview string, client *mongo.Client) (string, int, er
 	return response, rankVal, nil
 }
 
-func GetRankings(client *mongo.Client) ([]models.Ranking, error) {
+func GetRankings(client *mongo.Client, c *gin.Context) ([]models.Ranking, error) {
 	var rankings []models.Ranking
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	ctx, cancel := context.WithTimeout(c, 100*time.Second)
 	defer cancel()
 	rankingCollection := database.OpenCollection("rankings", client)
 	cursor, err := rankingCollection.Find(ctx, bson.M{})
@@ -266,7 +266,6 @@ func GetRecommendedMovies(client *mongo.Client) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		log.Println(`Recommended Movies:`, recommendedMovies)
 		c.JSON(http.StatusOK, recommendedMovies)
 	}
 }
