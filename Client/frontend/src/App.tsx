@@ -9,6 +9,8 @@ import Register from "./pages/Register";
 import Movies from "./pages/Movies";
 import AddMovie from "./pages/AddMovie";
 import MovieDetails from "./pages/MovieDetails";
+import { PublicLayout, ProtectedLayout } from "./components/Layout";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -19,11 +21,16 @@ function App() {
           <main className="min-h-screen bg-background">
             <Routes>
               <Route path="/" element={<Homepage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="/movies/add" element={<AddMovie />} />
-              <Route path="/movies/:id" element={<MovieDetails />} />
+              <Route element={<PublicLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/movies" element={<Movies />} />
+                <Route path="/movies/:id" element={<MovieDetails />} />
+              </Route>
+              <Route element={<ProtectedLayout />}>
+                <Route path="/movies/add" element={<AddMovie />} />
+                <Route path="/profile" element={<Profile />} />
+              </Route>
             </Routes>
           </main>
           <Toaster />

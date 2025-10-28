@@ -20,3 +20,7 @@ Client/movies-stream-client/.env
 Server/StreamMoviesServer/.env
 .env
 *.env
+
+GEMINI.md
+AGENT.md
+WARP.md

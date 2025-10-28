@@ -8,13 +8,14 @@ import React, {
 import type { ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useToast } from "../hooks/use-toast";
-import type { User, LoginInput, RegisterInput } from "../types";
+import type { User, LoginInput, RegisterInput, UpdateUserInput } from "../types";
 
 interface AuthContextType {
   user: User | null;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => void;
+  updateUser: (input: UpdateUserInput) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -172,8 +173,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = async (input: UpdateUserInput) => {
+    if (!user) {
+      throw new Error("You must be logged in to update your profile.");
+    }
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/${user.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Update failed");
+    }
+
+    const updatedUser = await response.json();
+    setUser(updatedUser);
+    toast({
+      title: "Update successful!",
+      description: "Your profile has been updated.",
+      variant: "success",
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
