@@ -29,7 +29,7 @@ const Register = () => {
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const response = await fetch(`${import.meta.env.API_BASE_URL}genres`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/genres`);
         const data = await response.json();
         setGenres(
           data.map((genre: { genre_name: number; genre_id: string }) => ({
