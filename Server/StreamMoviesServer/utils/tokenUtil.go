@@ -67,6 +67,23 @@ func GenerateAllTokens(email, firstName, lastName, role, userID string) (string,
 	return signedToken, signedRefreshToken, nil
 }
 
+func GeneratePasswordResetToken(userID string) (string, error) {
+	claims := &SignedDetails{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "MovieStreamApp",
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString([]byte(SecretKey))
+	if err != nil {
+		return "", err
+	}
+	return signedToken, nil
+}
+
 func UpdateAllTokens(userID, token, refreshToken string, client *mongo.Client) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()

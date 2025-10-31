@@ -12,7 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/database"
+	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/models"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/routes"
+	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/utils"
 )
 
 func main() {
@@ -64,8 +66,19 @@ func main() {
 			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
 	}()
+	mailChan := make(chan models.MailData)
+	defer close(mailChan)
+	utils.ListenForMail(mailChan)
+	// msg := models.MailData{
+	// 	To:       "oH4yH@example.com",
+	// 	From:     "me@example.com",
+	// 	Subject:  "Test Email",
+	// 	Content:  "Test Reset link in Email",
+	// 	Template: "email-template.html",
+	// }
+	// mailChan <- msg
 
-	routes.SetupUnProtectedRoutes(router, client)
+	routes.SetupUnProtectedRoutes(router, client, mailChan)
 	routes.SetupProtectedRoutes(router, client)
 
 	if err := router.Run(":8080"); err != nil {

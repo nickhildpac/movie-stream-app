@@ -43,7 +43,7 @@ func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 			return
 
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 		count, err := usersCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 		if err != nil {
@@ -245,5 +245,124 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) // expires in 1 week
 
 		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed", "access_token": newToken})
+	}
+}
+
+func RequestResetPassword(client *mongo.Client, mailChan chan models.MailData) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Email string `json:"email" validate:"required,email"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+			return
+		}
+		validate := validator.New()
+		if err := validate.Struct(req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": err.Error()})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+
+		usersCollection := database.OpenCollection("users", client)
+		var user models.User
+		err := usersCollection.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		token, err := utils.GeneratePasswordResetToken(user.UserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate reset token"})
+			return
+		}
+
+		_, err = usersCollection.UpdateOne(
+			ctx,
+			bson.M{"user_id": user.UserID},
+			bson.M{"$set": bson.M{
+				"password_reset_token":   token,
+				"password_reset_expires": time.Now().Add(time.Minute * 15),
+			}},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user with reset token"})
+			return
+		}
+
+		// Assuming you have a function to send emails
+		resetLink := fmt.Sprintf("http://localhost:5173/reset-password?token=%s", token)
+		mailData := models.MailData{
+			To:       user.Email,
+			From:     "no-reply@movieapp.com",
+			Subject:  "Password Reset",
+			Content:  resetLink,
+			Template: "password-reset.html",
+		}
+		// This is a placeholder for your email sending logic
+		// You would typically call a utility function here, e.g., utils.SendEmail(mailData)
+		fmt.Println("Sending password reset email:", mailData)
+		mailChan <- mailData
+
+		c.JSON(http.StatusOK, gin.H{"message": "Password reset email sent"})
+	}
+}
+
+func ResetPassword(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Token       string `json:"token" validate:"required"`
+			NewPassword string `json:"new_password" validate:"required,min=6"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+			return
+		}
+		validate := validator.New()
+		if err := validate.Struct(req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": err.Error()})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+
+		usersCollection := database.OpenCollection("users", client)
+		var user models.User
+		err := usersCollection.FindOne(ctx, bson.M{"password_reset_token": req.Token}).Decode(&user)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Invalid or expired token"})
+			return
+		}
+
+		if time.Now().After(user.PasswordResetExpires) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Token has expired"})
+			return
+		}
+
+		hashedPassword, err := HashPassword(req.NewPassword)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+
+		_, err = usersCollection.UpdateOne(
+			ctx,
+			bson.M{"user_id": user.UserID},
+			bson.M{"$set": bson.M{
+				"password":               hashedPassword,
+				"password_reset_token":   "",
+				"password_reset_expires": time.Time{},
+			}},
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully"})
 	}
 }
