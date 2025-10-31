@@ -12,7 +12,7 @@ type User struct {
 	FirstName            string        `json:"first_name" bson:"first_name" validate:"required,min=2,max=100"`
 	LastName             string        `json:"last_name" bson:"last_name" validate:"required,min=2,max=100"`
 	Email                string        `json:"email" bson:"email" validate:"required,email"`
-	Password             string        `json:"password" bson:"password" validate:"required,min=6"`
+	Password             string        `json:"password,omitempty" bson:"password,omitempty" validate:"omitempty,min=6"`
 	Role                 string        `json:"role" bson:"role" validate:"oneof=ADMIN USER"`
 	CreatedAt            time.Time     `json:"created_at" bson:"created_at"`
 	UpdatedAt            time.Time     `json:"update_at" bson:"update_at"`
@@ -21,6 +21,7 @@ type User struct {
 	FavouriteGenres      []Genre       `json:"favourite_genres" bson:"favourite_genres" validate:"required,dive"`
 	PasswordResetToken   string        `json:"password_reset_token,omitempty" bson:"password_reset_token,omitempty"`
 	PasswordResetExpires time.Time     `json:"password_reset_expires,omitempty" bson:"password_reset_expires,omitempty"`
+	AuthProvider         string        `json:"auth_provider" bson:"auth_provider"`
 }
 type UserLogin struct {
 	Email    string `json:"email" validate:"required,email"`

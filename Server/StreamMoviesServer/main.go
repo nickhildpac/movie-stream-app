@@ -11,6 +11,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/controllers"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/database"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/models"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/routes"
@@ -66,6 +67,7 @@ func main() {
 			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
 	}()
+	controllers.Init()
 	mailChan := make(chan models.MailData)
 	defer close(mailChan)
 	utils.ListenForMail(mailChan)

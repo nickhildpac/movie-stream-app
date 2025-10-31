@@ -2,8 +2,14 @@ package controllers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +20,157 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
+
+var (
+	googleOauthConfig *oauth2.Config
+	// TODO: randomize it
+	oauthStateString = "pseudo-random"
+)
+
+func Init() {
+	googleOauthConfig = &oauth2.Config{
+		RedirectURL:  "http://localhost:8080/v1/auth/google/callback",
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		Endpoint:     google.Endpoint,
+	}
+}
+
+func GoogleLogin(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var state string
+		b := make([]byte, 16)
+		_, err := rand.Read(b)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		state = base64.URLEncoding.EncodeToString(b)
+
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     "oauthstate",
+			Value:    state,
+			Expires:  time.Now().Add(20 * time.Minute),
+			HttpOnly: true,
+		})
+		url := googleOauthConfig.AuthCodeURL(state)
+		log.Println("------------- ", url)
+		c.Redirect(http.StatusTemporaryRedirect, url)
+	}
+}
+
+func GoogleCallback(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		oauthState, _ := c.Cookie("oauthstate")
+		if c.Query("state") != oauthState {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state"})
+			return
+		}
+		log.Println("------------- ", c.Query("code"))
+		code := c.Query("code")
+		token, err := googleOauthConfig.Exchange(context.Background(), code)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token", "details": err.Error()})
+			return
+		}
+
+		response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user info", "details": err.Error()})
+			return
+		}
+		log.Println("------------- ", response)
+		defer response.Body.Close()
+
+		contents, err := io.ReadAll(response.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read user info", "details": err.Error()})
+			return
+		}
+		log.Println("------------- contents ", contents)
+
+		var userInfo struct {
+			Email     string `json:"email"`
+			FirstName string `json:"given_name"`
+			LastName  string `json:"family_name"`
+		}
+		if err := json.Unmarshal(contents, &userInfo); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse user info", "details": err.Error()})
+			return
+		}
+		log.Println("------------- userInfo ", userInfo)
+
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+
+		usersCollection := database.OpenCollection("users", client)
+		var user models.User
+		err = usersCollection.FindOne(ctx, bson.M{"email": userInfo.Email}).Decode(&user)
+
+		if err == mongo.ErrNoDocuments {
+			// User does not exist, create a new one
+			user = models.User{
+				UserID:       bson.NewObjectID().Hex(),
+				FirstName:    userInfo.FirstName,
+				LastName:     userInfo.LastName,
+				Email:        userInfo.Email,
+				Role:         "USER",
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+				AuthProvider: "google",
+			}
+			log.Println("------------- user ", user)
+
+			_, err := usersCollection.InsertOne(ctx, user)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+				return
+			}
+		} else if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+			return
+		}
+		log.Println("------------- user created ", user)
+		// User exists or was just created, generate tokens
+		appToken, refreshToken, err := utils.GenerateAllTokens(user.Email, user.FirstName, user.LastName, user.Role, user.UserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+			return
+		}
+
+		err = utils.UpdateAllTokens(user.UserID, appToken, refreshToken, client)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
+			return
+		}
+		log.Println("------------- tokens updated ", appToken, refreshToken)
+
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     "access_token",
+			Value:    appToken,
+			Path:     "/",
+			MaxAge:   86400,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    refreshToken,
+			Path:     "/",
+			MaxAge:   604800,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+
+		c.Redirect(http.StatusTemporaryRedirect, "http://localhost:5173") // Redirect to frontend
+	}
+}
 
 func HashPassword(password string) (string, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -58,6 +214,7 @@ func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 		user.CreatedAt = time.Now()
 		user.UpdatedAt = time.Now()
 		user.Password = hashedPassword
+		user.AuthProvider = "local"
 
 		result, err := usersCollection.InsertOne(ctx, user)
 		if err != nil {
@@ -89,6 +246,11 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
+		if foundUser.AuthProvider != "local" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Please sign in with " + foundUser.AuthProvider})
+			return
+		}
+
 		err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(userLogin.Password))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
@@ -107,20 +269,18 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 		http.SetCookie(c.Writer, &http.Cookie{
-			Name:  "access_token",
-			Value: token,
-			Path:  "/",
-			// Domain:   "localhost",
+			Name:     "access_token",
+			Value:    token,
+			Path:     "/",
 			MaxAge:   86400,
 			Secure:   true,
 			HttpOnly: true,
 			SameSite: http.SameSiteNoneMode,
 		})
 		http.SetCookie(c.Writer, &http.Cookie{
-			Name:  "refresh_token",
-			Value: refreshToken,
-			Path:  "/",
-			// Domain:   "localhost",
+			Name:     "refresh_token",
+			Value:    refreshToken,
+			Path:     "/",
 			MaxAge:   604800,
 			Secure:   true,
 			HttpOnly: true,
@@ -128,13 +288,12 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 		})
 
 		c.JSON(http.StatusOK, models.UserResponse{
-			UserId:    foundUser.UserID,
-			FirstName: foundUser.FirstName,
-			LastName:  foundUser.LastName,
-			Email:     foundUser.Email,
-			Role:      foundUser.Role,
-			Token:     token,
-			// RefreshToken:    refreshToken,
+			UserId:          foundUser.UserID,
+			FirstName:       foundUser.FirstName,
+			LastName:        foundUser.LastName,
+			Email:           foundUser.Email,
+			Role:            foundUser.Role,
+			Token:           token,
 			FavouriteGenres: foundUser.FavouriteGenres,
 		})
 	}
@@ -142,8 +301,6 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 
 func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Clear the access_token cookie
-
 		var UserLogout struct {
 			UserID string `json:"user_id"`
 		}
@@ -156,42 +313,20 @@ func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 
 		fmt.Println("User ID from Logout request:", UserLogout.UserID)
 
-		err = utils.UpdateAllTokens(UserLogout.UserID, "", "", client) // Clear tokens in the database
-		// Optionally, you can also remove the user session from the database if needed
+		err = utils.UpdateAllTokens(UserLogout.UserID, "", "", client)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error logging out"})
 			return
 		}
-		// c.SetCookie(
-		// 	"access_token",
-		// 	"",
-		// 	-1, // MaxAge negative → delete immediately
-		// 	"/",
-		// 	"localhost", // Adjust to your domain
-		// 	true,        // Use true in production with HTTPS
-		// 	true,        // HttpOnly
-		// )
 		http.SetCookie(c.Writer, &http.Cookie{
-			Name:  "access_token",
-			Value: "",
-			Path:  "/",
-			// Domain:   "localhost",
+			Name:     "access_token",
+			Value:    "",
+			Path:     "/",
 			MaxAge:   -1,
 			Secure:   true,
 			HttpOnly: true,
 			SameSite: http.SameSiteNoneMode,
 		})
-
-		// // Clear the refresh_token cookie
-		// c.SetCookie(
-		// 	"refresh_token",
-		// 	"",
-		// 	-1,
-		// 	"/",
-		// 	"localhost",
-		// 	true,
-		// 	true,
-		// )
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name:     "refresh_token",
 			Value:    "",
@@ -241,8 +376,8 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.SetCookie("access_token", newToken, 86400, "/", "localhost", true, true)          // expires in 24 hours
-		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) // expires in 1 week
+		c.SetCookie("access_token", newToken, 86400, "/", "localhost", true, true)
+		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true)
 
 		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed", "access_token": newToken})
 	}
@@ -293,7 +428,6 @@ func RequestResetPassword(client *mongo.Client, mailChan chan models.MailData) g
 			return
 		}
 
-		// Assuming you have a function to send emails
 		resetLink := fmt.Sprintf("http://localhost:5173/reset-password?token=%s", token)
 		mailData := models.MailData{
 			To:       user.Email,
@@ -302,10 +436,9 @@ func RequestResetPassword(client *mongo.Client, mailChan chan models.MailData) g
 			Content:  resetLink,
 			Template: "password-reset.html",
 		}
-		// This is a placeholder for your email sending logic
-		// You would typically call a utility function here, e.g., utils.SendEmail(mailData)
-		fmt.Println("Sending password reset email:", mailData)
+
 		mailChan <- mailData
+		fmt.Println("Sending password reset email:", mailData)
 
 		c.JSON(http.StatusOK, gin.H{"message": "Password reset email sent"})
 	}

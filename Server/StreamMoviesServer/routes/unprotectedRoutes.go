@@ -17,4 +17,6 @@ func SetupUnProtectedRoutes(router *gin.Engine, client *mongo.Client, mailChan c
 	v1.POST("/refresh", controllers.RefreshTokenHandler(client))
 	v1.POST("/request-reset", controllers.RequestResetPassword(client, mailChan))
 	v1.POST("/reset-password", controllers.ResetPassword(client))
+	v1.GET("/auth/google/login", controllers.GoogleLogin(client))
+	v1.GET("/auth/google/callback", controllers.GoogleCallback(client))
 }
