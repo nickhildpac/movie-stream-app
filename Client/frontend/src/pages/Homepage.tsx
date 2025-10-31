@@ -60,7 +60,7 @@ const Homepage = () => {
         <h2 className="text-2xl font-semibold mb-4">Recommended Movies</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {recommendedMovies.map((movie) => (
-            <Card key={movie._id} className="overflow-hidden">
+            <Card key={movie.imdb_id} className="overflow-hidden">
               <CardHeader className="p-0">
                 <img
                   src={movie.poster_path}
@@ -69,20 +69,12 @@ const Homepage = () => {
                 />
               </CardHeader>
               <CardContent className="p-4">
-                <CardTitle>{movie.title}</CardTitle>
-                <CardDescription>{movie.admin_review}</CardDescription>
+                <CardTitle className="text-center">{movie.title}</CardTitle>
+                <CardDescription className="text-center">{movie.genre.map((g) => g.genre_name).join(", ")}</CardDescription>
               </CardContent>
               <CardFooter className="p-4 bg-secondary/50 flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Rating: {movie.ranking.ranking_value}/10
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {movie.genre.map((g) => g.genre_name).join(", ")}
-                  </p>
-                </div>
-                <Button asChild size="sm">
-                  <Link to={`/movies/${movie.imdb_id}`}>View Details</Link>
+                <Button className="w-full">
+                  <Link to={`/movies/${movie.imdb_id}`}>{movie.ranking.ranking_name}</Link>
                 </Button>
               </CardFooter>
             </Card>

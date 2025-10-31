@@ -6,7 +6,6 @@ import type { Movie } from '../types';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 // import YouTube from 'react-youtube';
@@ -64,12 +63,12 @@ const MovieDetails = () => {
                 <div className="flex space-x-2 pt-4">
                   <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline">Edit</Button>
+                      <Button variant="outline">Update Review</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Edit Movie</DialogTitle>
-                        <DialogDescription>Update movie details</DialogDescription>
+                        <DialogTitle>Update Review</DialogTitle>
+                        <DialogDescription>How was this movie?</DialogDescription>
                       </DialogHeader>
                       <EditMovieForm movie={movie} onSave={handleEdit} />
                     </DialogContent>
@@ -106,11 +105,7 @@ const MovieDetails = () => {
 };
 
 const EditMovieForm = ({ movie, onSave }: { movie: Movie; onSave: (movie: Partial<Movie>) => void }) => {
-  const [title, setTitle] = useState(movie.title);
   const [review, setReview] = useState(movie.admin_review);
-  const [posterUrl, setPosterUrl] = useState(movie.poster_path);
-  const [genres, setGenres] = useState(movie.genre.map((genre: { genre_name: string, genre_id: number }) => genre.genre_name).join(', '));
-  const [rating, setRating] = useState(movie.ranking.ranking_value.toString());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,26 +118,10 @@ const EditMovieForm = ({ movie, onSave }: { movie: Movie; onSave: (movie: Partia
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="edit-title">Title</Label>
-        <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
-      <div>
         <Label htmlFor="edit-description">Review</Label>
         <Textarea id="edit-description" value={review} onChange={(e) => setReview(e.target.value)} />
       </div>
-      <div>
-        <Label htmlFor="edit-posterUrl">Poster URL</Label>
-        <Input id="edit-posterUrl" type="url" value={posterUrl} onChange={(e) => setPosterUrl(e.target.value)} />
-      </div>
-      <div>
-        <Label htmlFor="edit-genres">Genres</Label>
-        <Input id="edit-genres" value={genres} onChange={(e) => setGenres(e.target.value)} />
-      </div>
-      <div>
-        <Label htmlFor="edit-rating">Ranking</Label>
-        <Input id="edit-rating" type="number" min="0" max="10" step="0.1" value={rating} onChange={(e) => setRating(e.target.value)} />
-      </div>
-      <Button type="submit">Save Changes</Button>
+      <Button type="submit">Update Review</Button>
     </form>
   );
 };

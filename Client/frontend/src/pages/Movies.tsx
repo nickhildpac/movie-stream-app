@@ -33,19 +33,13 @@ const Movies = () => {
             <CardHeader className="p-0">
               <img src={movie.poster_path} alt={movie.title} className="w-full h-48 object-cover" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="p-4 text-center">
               <CardTitle>{movie.title}</CardTitle>
-              <CardDescription>{movie.admin_review}</CardDescription>
+              <CardDescription>{movie.genre.map(g => g.genre_name).join(', ')}</CardDescription>
             </CardContent>
             <CardFooter className="p-4 bg-secondary/50 flex justify-between items-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Rating: {movie.ranking.ranking_value}/10</p>
-                <p className="text-sm text-muted-foreground">
-                  Genres: {movie.genre.map(g => g.genre_name).join(', ')}
-                </p>
-              </div>
-              <Button asChild size="sm">
-                <Link to={`/movies/${movie.imdb_id}`}>View Details</Link>
+              <Button className='w-full'>
+                <Link to={`/movies/${movie.imdb_id}`}>{movie.ranking.ranking_name}</Link>
               </Button>
             </CardFooter>
           </Card>
