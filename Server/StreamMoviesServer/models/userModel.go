@@ -1,3 +1,4 @@
+// Package models includes domain used in the application
 package models
 
 import (
@@ -20,7 +21,7 @@ type User struct {
 	RefreshToken         string        `json:"refresh_token" bson:"refresh_token"`
 	FavouriteGenres      []Genre       `json:"favourite_genres" bson:"favourite_genres" validate:"required,dive"`
 	PasswordResetToken   string        `json:"password_reset_token,omitempty" bson:"password_reset_token,omitempty"`
-	PasswordResetExpires time.Time     `json:"password_reset_expires,omitempty" bson:"password_reset_expires,omitempty"`
+	PasswordResetExpires time.Time     `json:"password_reset_expires,omitzero" bson:"password_reset_expires,omitzero"`
 	AuthProvider         string        `json:"auth_provider" bson:"auth_provider"`
 }
 type UserLogin struct {
@@ -28,7 +29,7 @@ type UserLogin struct {
 	Password string `json:"password" validate:"required,min=6"`
 }
 type UserResponse struct {
-	UserId          string  `json:"user_id"`
+	UserID          string  `json:"user_id"`
 	FirstName       string  `json:"first_name"`
 	LastName        string  `json:"last_name"`
 	Email           string  `json:"email"`
@@ -44,4 +45,13 @@ type MailData struct {
 	Subject  string
 	Content  string
 	Template string
+}
+
+type UpdateUser struct {
+	UserID          string    `json:"user_id" bson:"user_id"`
+	FirstName       string    `json:"first_name" bson:"first_name" validate:"required,min=2,max=100"`
+	LastName        string    `json:"last_name" bson:"last_name" validate:"required,min=2,max=100"`
+	Email           string    `json:"email" bson:"email" validate:"required,email"`
+	UpdatedAt       time.Time `json:"update_at" bson:"update_at"`
+	FavouriteGenres []Genre   `json:"favourite_genres" bson:"favourite_genres" validate:"required,dive"`
 }
