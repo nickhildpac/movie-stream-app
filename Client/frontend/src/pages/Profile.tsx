@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { Label } from "../components/ui/label"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import {
   Card,
   CardContent,
@@ -10,101 +9,78 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import type { CSSObjectWithLabel } from "react-select";
-import Select from "react-select";
+import GenreSelect from "../components/GenreSelect";
 import { type Genre } from "../types";
 
 const Profile = () => {
-  const { user, updateUser } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [favouriteGenres, setFavouriteGenres] = useState<Genre[]>([]);
-  const [genres, setGenres] = useState<{ value: Genre; label: string }[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || user.name || "");
-      setLastName(user.last_name || "");
-      setEmail(user.email || "");
-      setFavouriteGenres(user.favourite_genres || []);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const fetchGenres = async () => {
+    const fetchUserProfile = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/v1/genres`);
-        const data = await response.json();
-        setGenres(
-          data.map((genre: Genre) => ({
-            value: genre,
-            label: genre.genre_name,
-          })),
-        );
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setFirstName(userData.first_name || userData.name || "");
+          setLastName(userData.last_name || "");
+          setEmail(userData.email || "");
+          setFavouriteGenres(userData.favourite_genres || []);
+        }
       } catch (error) {
-        console.error("Failed to fetch genres:", error);
-        setError("Failed to load genres. Please try again later.");
+        console.error("Failed to fetch user profile:", error);
+        setError("Failed to load profile data. Please try again later.");
       }
     };
-    fetchGenres();
+
+    fetchUserProfile();
   }, []);
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
     try {
-      await updateUser({
+      const updateData: any = {
         first_name: firstName,
         last_name: lastName,
         email,
-        ...(password && { password }),
         favourite_genres: favouriteGenres,
+      };
+      console.log(updateData)
+
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Update failed");
+      }
+
       setSuccess("Profile updated successfully!");
       setError("");
-    } catch {
-      setError("Update failed");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Update failed");
       setSuccess("");
     }
   };
 
-  const customStyles = {
-    control: (provided: CSSObjectWithLabel) => ({
-      ...provided,
-      backgroundColor: "#2d3748",
-      borderColor: "#4a5568",
-      color: "white",
-    }),
-    option: (provided: CSSObjectWithLabel, state: { isFocused: boolean }) => ({
-      ...provided,
-      backgroundColor: state.isFocused ? "#4a5568" : "#2d3748",
-      color: "white",
-    }),
-    multiValue: (provided: CSSObjectWithLabel) => ({
-      ...provided,
-      backgroundColor: "#4a5568",
-    }),
-    multiValueLabel: (provided: CSSObjectWithLabel) => ({
-      ...provided,
-      color: "white",
-    }),
-    multiValueRemove: (provided: CSSObjectWithLabel) => ({
-      ...provided,
-      color: "white",
-      ":hover": {
-        backgroundColor: "#718096",
-        color: "white",
-      },
-    }),
-  };
+
 
   return (
     <div className="container mx-auto px-4 py-8 flex justify-center">
@@ -147,39 +123,10 @@ const Profile = () => {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="genres">Favourite Genres</Label>
-              <Select
-                id="genres"
-                isMulti
-                options={genres}
-                styles={customStyles}
-                value={genres.filter(option => favouriteGenres.some(favGenre => favGenre.genre_id === option.value.genre_id))}
-                onChange={(selectedOptions) =>
-                  setFavouriteGenres(
-                    selectedOptions.map((option) => option.value),
-                  )
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+            <GenreSelect
+              value={favouriteGenres}
+              onChange={setFavouriteGenres}
+            />
             {error && <p className="text-red-500 text-sm">{error}</p>}
             {success && <p className="text-green-500 text-sm">{success}</p>}
             <Button type="submit" className="w-full">
