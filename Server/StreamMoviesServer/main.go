@@ -30,6 +30,8 @@ func main() {
 		log.Println("Warning: unable to find .env file")
 	}
 
+	controllers.InitGoogleOAuth()
+
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
 
 	var origins []string
@@ -67,7 +69,6 @@ func main() {
 			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
 	}()
-	controllers.Init()
 	mailChan := make(chan models.MailData)
 	defer close(mailChan)
 	utils.ListenForMail(mailChan)

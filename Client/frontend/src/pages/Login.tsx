@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -18,9 +24,9 @@ const Login = () => {
     try {
       console.log("email:", email, "password:", password);
       await login({ email, password });
-      navigate('/');
+      navigate("/");
     } catch {
-      setError('Invalid credentials');
+      setError("Invalid credentials");
     }
   };
 
@@ -29,7 +35,9 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardDescription>
+            Enter your credentials to access your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,18 +67,25 @@ const Login = () => {
             </Button>
           </form>
           <div className="mt-4">
-            <a href="http://localhost:8080/v1/auth/google/login" className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2">
+            <a
+              href={`${import.meta.env.VITE_API_BASE_URL}/auth/google/login`}
+              className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2"
+            >
+              <i className="fab fa-google mr-2"></i>
               Sign in with Google
             </a>
           </div>
           <p className="text-center mt-4">
-            Don't have an account?{' '}
+            Don't have an account?{" "}
             <Link to="/register" className="text-primary hover:underline">
               Register
             </Link>
           </p>
           <p className="text-center mt-2">
-            <Link to="/forgot-password" className="text-sm text-muted-foreground hover:underline">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-muted-foreground hover:underline"
+            >
               Forgot Password?
             </Link>
           </p>

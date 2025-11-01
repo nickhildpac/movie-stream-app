@@ -8,7 +8,7 @@ import (
 )
 
 func SetupUnProtectedRoutes(router *gin.Engine, client *mongo.Client, mailChan chan models.MailData) {
-	v1 := router.Group("/v1")
+	v1 := router.Group("/api/v1")
 	v1.GET("/movies", controllers.GetMovies(client))
 	v1.POST("/register", controllers.RegisterUser(client))
 	v1.POST("/login", controllers.LoginUser(client))

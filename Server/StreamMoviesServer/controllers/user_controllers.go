@@ -26,13 +26,11 @@ import (
 
 var (
 	googleOauthConfig *oauth2.Config
-	// TODO: randomize it
-	oauthStateString = "pseudo-random"
 )
 
-func Init() {
+func InitGoogleOAuth() {
 	googleOauthConfig = &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/v1/auth/google/callback",
+		RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
@@ -50,6 +48,7 @@ func GoogleLogin(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 		state = base64.URLEncoding.EncodeToString(b)
+		log.Println("------------- ", state)
 
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name:     "oauthstate",
@@ -66,6 +65,7 @@ func GoogleLogin(client *mongo.Client) gin.HandlerFunc {
 func GoogleCallback(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		oauthState, _ := c.Cookie("oauthstate")
+		log.Println("------------- ", oauthState)
 		if c.Query("state") != oauthState {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid state"})
 			return
@@ -294,6 +294,43 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 			Email:           foundUser.Email,
 			Role:            foundUser.Role,
 			Token:           token,
+			FavouriteGenres: foundUser.FavouriteGenres,
+		})
+	}
+}
+
+func GetUser(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+
+		userCollection := database.OpenCollection("users", client)
+
+		var foundUser models.User
+		err := userCollection.FindOne(ctx, bson.M{"user_id": userID}).Decode(&foundUser)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error", "details": err.Error()})
+			}
+			return
+		}
+
+		c.JSON(http.StatusOK, models.UserResponse{
+			UserId:          foundUser.UserID,
+			FirstName:       foundUser.FirstName,
+			LastName:        foundUser.LastName,
+			Email:           foundUser.Email,
+			Role:            foundUser.Role,
+			Token:           foundUser.Token,
+			RefreshToken:    foundUser.RefreshToken,
 			FavouriteGenres: foundUser.FavouriteGenres,
 		})
 	}
