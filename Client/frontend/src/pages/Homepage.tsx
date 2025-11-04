@@ -99,6 +99,13 @@ const Homepage = () => {
                       {movie.release_date}
                     </CardDescription>
                   </CardContent>
+                  <CardFooter className="p-4 bg-secondary/50 flex justify-between items-center">
+                    <Button className="w-full" asChild>
+                      <Link to={`/tmdb-movies/${movie.id}`}>
+                        View Details
+                      </Link>
+                    </Button>
+                  </CardFooter>
                 </Card>
               ))}
             </div>

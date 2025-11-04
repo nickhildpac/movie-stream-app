@@ -13,6 +13,7 @@ import { PublicLayout, ProtectedLayout } from "./components/Layout";
 import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import TMDBMovieDetails from "./pages/TMDBMovieDetails";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/movies" element={<Movies />} />
                 <Route path="/movies/:id" element={<MovieDetails />} />
+                <Route path="/tmdb-movies/:id" element={<TMDBMovieDetails />} />
               </Route>
               <Route element={<ProtectedLayout />}>
                 <Route path="/movies/add" element={<AddMovie />} />

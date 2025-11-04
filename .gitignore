@@ -24,3 +24,5 @@ Server/StreamMoviesServer/.env
 GEMINI.md
 AGENT.md
 WARP.md
+
+.gemini/

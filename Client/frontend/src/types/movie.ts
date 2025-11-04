@@ -28,3 +28,34 @@ export interface CreateMovieInput {
   admin_review: string;
   ranking: Ranking;
 }
+
+
+
+export interface TMDBMovie {
+  id: number;
+  title: string;
+  poster_path: string;
+  overview: string;
+  release_date: string;
+  genres: { id: number; name: string }[];
+}
+
+
+
+
+
+
+
+export interface TMDBMovieSearchResult {
+  id: number;
+  title: string;
+  poster_path: string;
+  release_date: string;
+  genre_ids: number[];
+  overview: string;
+  backdrop_path: string;
+}
+
+
+
+
