@@ -1,0 +1,652 @@
+basePath: /api/v1
+definitions:
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.Genre:
+    properties:
+      genre_id:
+        type: integer
+      genre_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - genre_id
+    - genre_name
+    type: object
+  models.LogoutRequest:
+    properties:
+      user_id:
+        type: string
+    type: object
+  models.Movie:
+    properties:
+      _id:
+        type: string
+      admin_review:
+        type: string
+      genre:
+        items:
+          $ref: '#/definitions/models.Genre'
+        type: array
+      imdb_id:
+        type: string
+      poster_path:
+        type: string
+      ranking:
+        $ref: '#/definitions/models.Ranking'
+      title:
+        maxLength: 500
+        minLength: 2
+        type: string
+      youtube_id:
+        type: string
+    required:
+    - genre
+    - imdb_id
+    - poster_path
+    - ranking
+    - title
+    - youtube_id
+    type: object
+  models.PasswordReset:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  models.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  models.Ranking:
+    properties:
+      ranking_name:
+        type: string
+      ranking_value:
+        type: integer
+    required:
+    - ranking_name
+    - ranking_value
+    type: object
+  models.UpdateReview:
+    properties:
+      admin_review:
+        type: string
+    type: object
+  models.UpdateUser:
+    properties:
+      email:
+        type: string
+      favourite_genres:
+        items:
+          $ref: '#/definitions/models.Genre'
+        type: array
+      first_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      update_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - email
+    - favourite_genres
+    - first_name
+    - last_name
+    type: object
+  models.User:
+    properties:
+      _id:
+        type: string
+      auth_provider:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      favourite_genres:
+        items:
+          $ref: '#/definitions/models.Genre'
+        type: array
+      first_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+      password_reset_expires:
+        type: string
+      password_reset_token:
+        type: string
+      refresh_token:
+        type: string
+      role:
+        enum:
+        - ADMIN
+        - USER
+        type: string
+      token:
+        type: string
+      update_at:
+        type: string
+      user_id:
+        type: string
+    required:
+    - email
+    - favourite_genres
+    - first_name
+    - last_name
+    type: object
+  models.UserLogin:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.UserResponse:
+    properties:
+      email:
+        type: string
+      favourite_genres:
+        items:
+          $ref: '#/definitions/models.Genre'
+        type: array
+      first_name:
+        type: string
+      last_name:
+        type: string
+      refresh_token:
+        type: string
+      role:
+        type: string
+      token:
+        type: string
+      user_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server for a movie streaming application.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Movie Stream API
+  version: "1.0"
+paths:
+  /addmovie:
+    post:
+      consumes:
+      - application/json
+      description: Add a new movie to the database
+      parameters:
+      - description: Movie object
+        in: body
+        name: movie
+        required: true
+        schema:
+          $ref: '#/definitions/models.Movie'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Add a movie
+      tags:
+      - movies
+  /genre:
+    post:
+      consumes:
+      - application/json
+      description: Add a new genre or update an existing one
+      parameters:
+      - description: Genre object
+        in: body
+        name: genre
+        required: true
+        schema:
+          $ref: '#/definitions/models.Genre'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Add or update a genre
+      tags:
+      - genres
+  /genres:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all movie genres
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Genre'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all genres
+      tags:
+      - genres
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Login a user with email and password
+      parameters:
+      - description: User login object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login a user
+      tags:
+      - users
+  /logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout the current user
+      parameters:
+      - description: User ID
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Logout a user
+      tags:
+      - users
+  /me:
+    get:
+      consumes:
+      - application/json
+      description: Get details of the currently logged in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get user details
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update details of the currently logged in user
+      parameters:
+      - description: User object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update user details
+      tags:
+      - users
+  /movie/{imdb_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single movie by its IMDB ID
+      parameters:
+      - description: IMDB ID
+        in: path
+        name: imdb_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Movie'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a movie by ID
+      tags:
+      - movies
+  /movie/{imdb_id}/updatereview:
+    patch:
+      consumes:
+      - application/json
+      description: Update the admin review and ranking of a movie
+      parameters:
+      - description: IMDB ID
+        in: path
+        name: imdb_id
+        required: true
+        type: string
+      - description: Review object
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateReview'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a movie review
+      tags:
+      - movies
+  /movies:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all movies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all movies
+      tags:
+      - movies
+  /recommendedmovies:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of recommended movies for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get recommended movies
+      tags:
+      - movies
+  /refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh the access token using the refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - users
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with email and password
+      parameters:
+      - description: User object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - users
+  /request-reset:
+    post:
+      consumes:
+      - application/json
+      description: Request a password reset email
+      parameters:
+      - description: User email
+        in: body
+        name: email
+        required: true
+        schema:
+          $ref: '#/definitions/models.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Request a password reset
+      tags:
+      - users
+  /reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset the user's password
+      parameters:
+      - description: Reset password object
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/models.PasswordReset'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Reset password
+      tags:
+      - users
+swagger: "2.0"

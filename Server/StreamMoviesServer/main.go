@@ -13,11 +13,28 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/controllers"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/database"
+	_ "github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/docs"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/models"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/routes"
 	"github.com/nickhildpac/movie-stream-app/Server/StreamMoviesServer/utils"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title Movie Stream API
+// @version 1.0
+// @description This is a sample server for a movie streaming application.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api/v1
 func main() {
 	router := gin.Default()
 
@@ -83,6 +100,8 @@ func main() {
 
 	routes.SetupUnProtectedRoutes(router, client, mailChan)
 	routes.SetupProtectedRoutes(router, client)
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	if err := router.Run(":8080"); err != nil {
 		fmt.Println("Failed to start server", err)

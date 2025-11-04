@@ -166,6 +166,18 @@ func HashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
+// RegisterUser godoc
+// @Summary Register a new user
+// @Description Register a new user with email and password
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param user body models.User true "User object"
+// @Success 201 {object} primitive.ObjectID
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 409 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /register [post]
 func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user models.User
@@ -211,6 +223,18 @@ func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// LoginUser godoc
+// @Summary Login a user
+// @Description Login a user with email and password
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param user body models.UserLogin true "User login object"
+// @Success 200 {object} models.UserResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /login [post]
 func LoginUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var userLogin models.UserLogin
@@ -285,6 +309,17 @@ func LoginUser(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// GetUser godoc
+// @Summary Get user details
+// @Description Get details of the currently logged in user
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} models.UserResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /me [get]
 func GetUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("userID")
@@ -322,21 +357,30 @@ func GetUser(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// LogoutHandler godoc
+// @Summary Logout a user
+// @Description Logout the current user
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param user body models.LogoutRequest true "User ID"
+// @Success 200 {object} models.ErrorResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /logout [post]
 func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var UserLogout struct {
-			UserID string `json:"user_id"`
-		}
+		var userLogout models.LogoutRequest
 
-		err := c.ShouldBindJSON(&UserLogout)
+		err := c.ShouldBindJSON(&userLogout)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 			return
 		}
 
-		fmt.Println("User ID from Logout request:", UserLogout.UserID)
+		fmt.Println("User ID from Logout request:", userLogout.UserID)
 
-		err = utils.UpdateAllTokens(UserLogout.UserID, "", "", client)
+		err = utils.UpdateAllTokens(userLogout.UserID, "", "", client)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error logging out"})
 			return
@@ -364,6 +408,16 @@ func LogoutHandler(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// RefreshTokenHandler godoc
+// @Summary Refresh access token
+// @Description Refresh the access token using the refresh token
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /refresh [post]
 func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c, 100*time.Second)
@@ -406,11 +460,21 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// RequestResetPassword godoc
+// @Summary Request a password reset
+// @Description Request a password reset email
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param email body models.PasswordResetRequest true "User email"
+// @Success 200 {object} models.ErrorResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /request-reset [post]
 func RequestResetPassword(client *mongo.Client, mailChan chan models.MailData) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req struct {
-			Email string `json:"email" validate:"required,email"`
-		}
+		var req models.PasswordResetRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
 			return
@@ -467,6 +531,18 @@ func RequestResetPassword(client *mongo.Client, mailChan chan models.MailData) g
 	}
 }
 
+// ResetPassword godoc
+// @Summary Reset password
+// @Description Reset the user's password
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param password body models.PasswordReset true "Reset password object"
+// @Success 200 {object} models.ErrorResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /reset-password [post]
 func ResetPassword(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
@@ -523,6 +599,19 @@ func ResetPassword(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+// UpdateUser godoc
+// @Summary Update user details
+// @Description Update details of the currently logged in user
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param user body models.UpdateUser true "User object"
+// @Success 200 {object} models.UserResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /me [put]
 func UpdateUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("userID")

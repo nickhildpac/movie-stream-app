@@ -24,3 +24,7 @@ type Movie struct {
 	AdminReview string        `bson:"admin_review" json:"admin_review"`
 	Ranking     Ranking       `bson:"ranking" json:"ranking" validate:"required"`
 }
+
+type UpdateReview struct {
+	AdminReview string `json:"admin_review"`
+}

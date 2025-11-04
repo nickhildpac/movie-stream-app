@@ -55,3 +55,16 @@ type UpdateUser struct {
 	UpdatedAt       time.Time `json:"update_at" bson:"update_at"`
 	FavouriteGenres []Genre   `json:"favourite_genres" bson:"favourite_genres" validate:"required,dive"`
 }
+
+type LogoutRequest struct {
+	UserID string `json:"user_id"`
+}
+
+type PasswordResetRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type PasswordReset struct {
+	Token       string `json:"token" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=6"`
+}
