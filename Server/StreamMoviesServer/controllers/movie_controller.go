@@ -86,6 +86,35 @@ func GetMovie(client *mongo.Client) gin.HandlerFunc {
 	}
 }
 
+func AddOrUpdateGenre(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+		var genre models.Genre
+		genresCollection := database.OpenCollection("genres", client)
+		if err := c.ShouldBindJSON(&genre); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		filter := bson.M{"genre_id": genre.GenreID}
+		update := bson.M{
+			"$set": bson.M{
+				"genre_name": genre.GenreName,
+			},
+		}
+		res := genresCollection.FindOneAndUpdate(ctx, filter, update)
+		if res.Err() == mongo.ErrNoDocuments {
+			_, err := genresCollection.InsertOne(ctx, genre)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusAccepted, gin.H{"message": "genre created"})
+			return
+		}
+		c.JSON(http.StatusAccepted, gin.H{"message": "genre updated"})
+	}
+}
 func AddMovie(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c, 100*time.Second)
@@ -96,13 +125,17 @@ func AddMovie(client *mongo.Client) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		_, err := movieCollection.InsertOne(ctx, movie)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		res := movieCollection.FindOne(ctx, bson.M{"imdb_id": movie.ImdbID})
+		if res.Err() == mongo.ErrNoDocuments {
+			_, err := movieCollection.InsertOne(ctx, movie)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
 		}
 		var insertedMovie models.Movie
-		err = movieCollection.FindOne(ctx, bson.D{{Key: "imdb_id", Value: movie.ImdbID}}).Decode(&insertedMovie)
+		err := movieCollection.FindOne(ctx, bson.D{{Key: "imdb_id", Value: movie.ImdbID}}).Decode(&insertedMovie)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
